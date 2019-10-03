@@ -1,6 +1,7 @@
 ! AWW-2016Jan, modifications to handle time subsetting and reduce mem alloc, and clean up
 !   renamed from estimate_precip; add also 'directory' var, changed some var names
 
+!will need HRRR input file info as input argument
 subroutine estimate_forcing_regression (x, z, ngrid, maxdistance, times, st_rec, end_rec, &
   & stnid, stnvar, directory, pcp, pop, pcperr, tmean, tmean_err, &
   & trange, trange_err, mean_autocorr, mean_tp_corr, y_mean, y_std, y_std_all, y_min, y_max, error, &
@@ -36,6 +37,8 @@ subroutine estimate_forcing_regression (x, z, ngrid, maxdistance, times, st_rec,
       integer, intent (out) :: error
     end subroutine read_station
 
+ ! interface for new subroutine to read HRRR data here
+ 
     subroutine normalize_x (x)
       use type
       real (dp), intent (inout) :: x (:, :)
@@ -463,6 +466,8 @@ subroutine estimate_forcing_regression (x, z, ngrid, maxdistance, times, st_rec,
   print *, 'Elapsed time for weight generation: ', real (t2-t1) / real (count_rate)
 
   ! AWW-Feb2016:  just allocate grids once time, and re-use in code below
+
+! need to modify these allocation statements using input X,Z dimensions
   allocate (twx_red(6, sta_limit))    ! these have dim1 = 6
   allocate (tx_red(6, sta_limit))
   allocate (twx_red_2(4, sta_limit))  ! these are for no slope calcs, have dim1 = 4
@@ -484,6 +489,10 @@ subroutine estimate_forcing_regression (x, z, ngrid, maxdistance, times, st_rec,
     ! do power transformation on precip vector (AWW: consider alternate transforms)
     call normalize_y (4.0d0, y)    ! SHOULD NOT BE HARDWIRED
 
+    !read HRRR time varying predictor grid here for current time step
+    !HRRR read subroutine: pass in HRRR file information, X, Z, station-grid correspondence 
+    !modify X, Z
+ 
     ! -------- loop through all grid cells for a given time step --------
     do g = 1, ngrid, 1
       ! call system_clock(tg1,count_rate)
@@ -688,6 +697,13 @@ subroutine estimate_forcing_regression (x, z, ngrid, maxdistance, times, st_rec,
 
             ! --- regression without slope ---
             ! AWW note that these now use the 2nd set of T* variables (different dimension)
+                      
+          ! may need to change the order of X & Z in main to accomodate regressions without slope
+          ! Do we want the no-slope regression to include HRRR predictors, or just the
+          ! vanilla lat,lon,elevation?
+          ! The original intent of elevation only regression is that there are many areas with small slopes
+          ! that shouldn't use slope in the regression.  However HRRR predictors may have value in these areas.
+          ! So I think moving to lat,lon,elevation,HRRR is the way to move forward.
 
             deallocate(tx_red_2)   ! just testing
             deallocate(twx_red_2)
@@ -740,7 +756,6 @@ subroutine estimate_forcing_regression (x, z, ngrid, maxdistance, times, st_rec,
           end if
 
           ! regression without slope
-
           deallocate(tx_red_2)   ! just testing
           deallocate(twx_red_2)
           allocate(tx_red_2(4, sta_limit))
