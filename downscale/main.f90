@@ -422,6 +422,11 @@ program gmet
     mask_1d   = reshape (mask, (/ nx*ny /))
  
     ngrid = nx * ny
+
+    !HRRR modifications
+    !modify X and Z to include HRRR based predictors
+    !change to a config file input: npredict
+    !the first 6 are defined below, the last npredict-6 will be defined in estimate_forcing_regression
     allocate (x(nstations, 6))   ! x arrays for station variables
     allocate (z(ngrid, 6))
     x(:, 1) = 1.0
@@ -461,6 +466,8 @@ program gmet
     allocate (y_max(ngrid, ntimes))
     allocate (y_min(ngrid, ntimes))
  
+    !will need to pass in file information for HRRR data
+    !do we want one HRRR file per timestep, or have multiple timesteps in each HRRR file?
     call estimate_forcing_regression (x, z, ngrid, maxdistance, times, st_rec, end_rec, &
    & stnid, station_var, directory, pcp, pop, pcperror, tmean, &
    & tmean_err, trange, trange_err, mean_autocorr, mean_tp_corr, y_mean, y_std, y_std_all, y_min, &
